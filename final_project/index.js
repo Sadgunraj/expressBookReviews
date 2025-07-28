@@ -1,22 +1,38 @@
 const express = require('express');
+const session = require('express-session');
 const jwt = require('jsonwebtoken');
-const session = require('express-session')
-const customer_routes = require('./router/auth_users.js').authenticated;
-const genl_routes = require('./router/general.js').general;
-
 const app = express();
+const { authenticated } = require("./router/auth_users");
+const auth_users = require("./router/auth_users.js");
+
 
 app.use(express.json());
+app.use(session({
+  secret: 'mySessionSecret',
+  resave: true,
+  saveUninitialized: true
+}));
 
-app.use("/customer",session({secret:"fingerprint_customer",resave: true, saveUninitialized: true}))
+const public_routes = require('./router/general.js').general;
+const customer_routes = require('./router/auth_users.js').authenticated;
 
-app.use("/customer/auth/*", function auth(req,res,next){
-//Write the authenication mechanism here
+app.use('/customer/auth/*', (req, res, next) => {
+  const token = req.session?.authorization?.token;
+  if (!token) return res.status(403).json({ message: "No token provided" });
+
+  jwt.verify(token, 'mySecretToken', (err, user) => {
+    if (err) return res.status(403).json({ message: "Invalid token" });
+    req.user = user;
+    next();
+  });
 });
- 
-const PORT =5000;
 
-app.use("/customer", customer_routes);
-app.use("/", genl_routes);
+app.use('/customer', customer_routes);
+app.use('/', public_routes);
+app.use('/customer/auth', authenticated);
+app.use('/customer', auth_users.authenticated);       // login/register/review PUT
+app.use('/customer', auth_users.regd_users);          // review DELETE
 
-app.listen(PORT,()=>console.log("Server is running"));
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
+});
