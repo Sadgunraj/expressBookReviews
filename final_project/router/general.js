@@ -88,5 +88,22 @@ public_users.get('/bookdetails-async/:isbn', async (req, res) => {
     }
   });
 
+  public_users.get('/title-async/:title', async (req, res) => {
+    const title = req.params.title;
+    try {
+      const response = await axios.get(`http://localhost:3000/title/${encodeURIComponent(title)}`);
+      res.status(200).json({
+        message: `Books with title '${title}' fetched using async/await`,
+        books: response.data
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch books by title",
+        error: error.message
+      });
+    }
+  });
+  
+
 module.exports.general = public_users;
 
